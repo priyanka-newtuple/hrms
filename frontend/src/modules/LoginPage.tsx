@@ -1,0 +1,91 @@
+import { useEffect, useState } from "react";
+import { Navigate, useSearchParams } from "react-router-dom";
+
+import { authApi, type DevUser } from "@/api/auth";
+import curves from "@/assets/geometric-curves-strip.png";
+import loginBg from "@/assets/login_page.png";
+import { useAuth } from "@/auth/AuthContext";
+import { safeNextPath } from "@/auth/session";
+import { Button } from "@/components/Button";
+import { PublicTopNav } from "@/components/PublicTopNav";
+
+export default function LoginPage() {
+  const { user, loading, refresh } = useAuth();
+  const [searchParams] = useSearchParams();
+  const afterLogin = safeNextPath(searchParams.get("next")) ?? "/";
+  const oauthError = searchParams.get("error");
+  const [devUsers, setDevUsers] = useState<DevUser[]>([]);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    authApi
+      .devUsers()
+      .then(setDevUsers)
+      .catch(() => setDevUsers([])); // dev-login disabled (production) — Google SSO only
+  }, []);
+
+  if (!loading && user) return <Navigate to={afterLogin} replace />;
+
+  async function handleDevLogin(email: string) {
+    setError(null);
+    try {
+      await authApi.devLogin(email);
+      await refresh();
+    } catch {
+      setError("Login failed.");
+    }
+  }
+
+  return (
+    <div className="relative flex h-dvh flex-col overflow-hidden">
+      <img src={loginBg} alt="" className="absolute inset-0 h-full w-full object-cover" />
+      <div className="absolute inset-0 bg-gradient-to-r from-gray-900/50 via-gray-900/20 to-transparent" />
+
+      <PublicTopNav />
+
+      <div className="relative z-10 flex min-h-0 flex-1 items-center justify-center overflow-hidden px-4 py-3 sm:px-8 lg:justify-start lg:px-12 xl:px-20">
+        <div className="flex max-h-full w-full max-w-xl flex-col overflow-hidden rounded-card bg-white shadow-2xl">
+          <div className="shrink-0 px-8 pt-8 text-center">
+            <h1 className="mx-auto w-fit">
+              <span className="-mr-[0.28em] block bg-cobalt-gradient bg-clip-text text-5xl font-light leading-none tracking-[0.28em] text-transparent sm:text-6xl">
+                HRMS
+              </span>
+              <span aria-hidden className="mt-2.5 block h-[3px] w-full bg-cobalt-gradient" />
+            </h1>
+          </div>
+
+          <div className="shrink-0 px-8 pt-4">
+            <a href={authApi.googleLoginUrl(afterLogin === "/" ? null : afterLogin)}>
+              <Button className="w-full">Sign in with your Newtuple Account</Button>
+            </a>
+          </div>
+
+          {devUsers.length > 0 && (
+            <div className="mx-8 mt-4 min-h-0 border-t border-gray-200 pt-3">
+              <p className="mb-2 text-xs font-medium uppercase tracking-wider text-gray-600">
+                Test as a role (local only)
+              </p>
+              <div className="max-h-[min(18rem,calc(100dvh-28rem))] space-y-0.5 overflow-y-auto">
+                {devUsers.map((u) => (
+                  <button
+                    key={u.email}
+                    onClick={() => handleDevLogin(u.email)}
+                    className="flex w-full items-center justify-between gap-3 rounded-xl px-3 py-2 text-left transition-colors duration-hover ease-brand hover:bg-gray-50"
+                  >
+                    <span className="text-sm font-medium text-gray-900">{u.role_name}</span>
+                    <span className="truncate text-xs text-gray-600">{u.full_name}</span>
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+          {(error || oauthError) && (
+            <p className="shrink-0 px-8 pt-2 text-center text-sm text-danger">{error || oauthError}</p>
+          )}
+
+          <img src={curves} alt="" className="pointer-events-none mt-2 w-full shrink-0" />
+        </div>
+      </div>
+    </div>
+  );
+}
