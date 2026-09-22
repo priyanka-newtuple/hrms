@@ -1,4 +1,4 @@
-from datetime import date, datetime, timezone
+from datetime import UTC, date, datetime
 
 from sqlalchemy import select
 from sqlalchemy.orm import selectinload
@@ -142,7 +142,7 @@ async def approve_or_publish(db, actor, kind, item_id, decision="approve"):
             if actor.id != x.hiring_manager_id and role(actor) != "Super Admin": raise PermissionDenied("The hiring manager must approve this requisition")
             x.status = "approved" if decision == "approve" else "draft"; x.approved_by_id = actor.id if decision == "approve" else None
         elif x.status == "approved" and decision == "publish":
-            _require(actor, HIRING_ROLES); x.status = "published"; x.published_by_id = actor.id; x.published_at = datetime.now(timezone.utc)
+            _require(actor, HIRING_ROLES); x.status = "published"; x.published_by_id = actor.id; x.published_at = datetime.now(UTC)
         else: raise Conflict("This opening is not ready for that action")
     else:
         _require(actor, PUBLISH_ROLES)
@@ -153,7 +153,7 @@ async def approve_or_publish(db, actor, kind, item_id, decision="approve"):
         if x.status not in ("draft", "pending_approval"): raise Conflict("Content is not ready to publish")
         if decision == "changes_requested": x.status = "draft"; x.approved_by_id = None
         else:
-            x.status = "published"; x.approved_by_id = actor.id; x.published_at = datetime.now(timezone.utc)
+            x.status = "published"; x.approved_by_id = actor.id; x.published_at = datetime.now(UTC)
     await db.commit(); return {"id": x.id, "status": x.status}
 
 

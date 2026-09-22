@@ -39,7 +39,7 @@ export default function PerformancePage() {
       {tab === "feedback" && <div className="grid gap-4 md:grid-cols-2">{data?.feedback_requests.map(item => <Card key={item.id}><div className="flex justify-between gap-2"><div><CardTitle>{item.employee_name}</CardTitle><p className="text-sm text-gray-600">{item.project_name}</p></div><Badge>{item.status}</Badge></div>{item.status === "pending" ? <Button className="mt-4" onClick={() => setFormAction({kind:"feedback",feedback:item})}>Provide feedback</Button> : <p className="mt-3 text-sm">{ratingText(item.rating)} · {item.contribution}</p>}</Card>)}</div>}
       {tab === "cycles" && <CycleList cycles={data?.cycles ?? []} canApprove={!!data?.can_approve_cycles} edit={setCycleEdit} act={fn => act.mutate({fn})} comment={comment} setComment={setComment}/>}</>}
     <FormError message={act.error ? apiErrorMessage(act.error) : null}/>
-    {cycleEdit && <CycleModal cycle={cycleEdit === "new" ? undefined : cycleEdit} close={() => setCycleEdit(null)} refresh={refresh}/>} {goalEdit && <GoalModal review={goalEdit.review} goal={goalEdit.goal} close={() => setGoalEdit(null)} refresh={refresh}/>} {formAction && <ReviewActionModal action={formAction} close={() => setFormAction(null)} refresh={refresh}/>
+    {cycleEdit && <CycleModal cycle={cycleEdit === "new" ? undefined : cycleEdit} close={() => setCycleEdit(null)} refresh={refresh}/>} {goalEdit && <GoalModal review={goalEdit.review} goal={goalEdit.goal} close={() => setGoalEdit(null)} refresh={refresh}/>} {formAction && <ReviewActionModal action={formAction} close={() => setFormAction(null)} refresh={refresh}/>}
   </div>;
 }
 

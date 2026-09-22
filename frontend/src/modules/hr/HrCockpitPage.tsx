@@ -1,6 +1,6 @@
 import { FormEvent, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { hrCockpitApi, type ContentItem } from "@/api/hrCockpit";
+import { hrCockpitApi } from "@/api/hrCockpit";
 import { apiErrorMessage as getApiErrorMessage } from "@/lib/apiError";
 
 const input = "w-full rounded-lg border border-gray-300 px-3 py-2 text-sm";

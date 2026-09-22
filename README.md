@@ -154,13 +154,11 @@ npm run build   # includes tsc --noEmit
 
 ## Production deployment
 
-```bash
-POSTGRES_PASSWORD=<strong-password> docker compose -f docker-compose.prod.yml up --build -d
-```
-
-Multi-stage images (no dev dependencies, static-built frontend served by its
-own Nginx, both behind the outer reverse-proxy Nginx). Mount real TLS certs
-into `nginx/nginx.prod.conf`'s referenced path before exposing 443.
+Production is deployed through GitHub Actions using immutable GHCR images. The
+stack listens on a loopback-only port behind the server's existing reverse
+proxy, so it does not conflict with other applications on ports 80/443. See
+[DEPLOYMENT.md](DEPLOYMENT.md) for the one-time server and GitHub setup, TLS,
+secrets, deployment behavior, rollback, and operating commands.
 
 ## What's intentionally out of scope for this pass
 

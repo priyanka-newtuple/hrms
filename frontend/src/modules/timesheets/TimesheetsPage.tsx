@@ -1,6 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { CalendarDays, ChevronLeft, ChevronRight, Plus } from "lucide-react";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 
 import { timesheetsApi, type Holiday, type TimesheetSubmission } from "@/api/timesheets";
 import { useAuth } from "@/auth/AuthContext";

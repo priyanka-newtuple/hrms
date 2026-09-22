@@ -248,9 +248,9 @@ async def main() -> None:
     )
 
     # ---- outbox: emails were queued along the way
-    from app.database import AsyncSessionLocal
     from sqlalchemy import func, select
 
+    from app.database import AsyncSessionLocal
     from app.models.notification import NotificationOutbox
 
     async with AsyncSessionLocal() as db:

@@ -1,10 +1,22 @@
+name: hrms
+
+x-backend-environment: &backend-environment
+  ENV: production
+  DATABASE_URL: postgresql+asyncpg://hrms:${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in .env}@postgres:5432/hrms
+
+x-logging: &default-logging
+  driver: json-file
+  options:
+    max-size: "10m"
+    max-file: "3"
+
 services:
   postgres:
     image: postgres:16-alpine
     restart: unless-stopped
     environment:
       POSTGRES_USER: hrms
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in .env}
       POSTGRES_DB: hrms
     volumes:
       - hrms_postgres_data:/var/lib/postgresql/data
@@ -12,44 +24,87 @@ services:
       test: ["CMD-SHELL", "pg_isready -U hrms -d hrms"]
       interval: 5s
       timeout: 5s
-      retries: 10
+      retries: 12
+    logging: *default-logging
+    networks: [hrms_internal]
 
-  backend:
-    build:
-      context: ./backend
-      target: prod
-    restart: unless-stopped
+  migrate:
+    image: ghcr.io/${GHCR_NAMESPACE:?Set GHCR_NAMESPACE}/hrms-backend:${IMAGE_TAG:?Set IMAGE_TAG}
     env_file:
-      - ./backend/.env
-    environment:
-      ENV: production
-      DATABASE_URL: postgresql+asyncpg://hrms:${POSTGRES_PASSWORD}@postgres:5432/hrms
+      - ./.env.backend
+    environment: *backend-environment
+    command: >-
+      sh -c "alembic upgrade head && python -m app.seed.production_data"
     depends_on:
       postgres:
         condition: service_healthy
-    command: >
-      sh -c "alembic upgrade head &&
-             uvicorn app.main:app --host 0.0.0.0 --port 8000 --workers 4"
+    restart: "no"
+    networks: [hrms_internal]
+
+  backend:
+    image: ghcr.io/${GHCR_NAMESPACE:?Set GHCR_NAMESPACE}/hrms-backend:${IMAGE_TAG:?Set IMAGE_TAG}
+    restart: unless-stopped
+    env_file:
+      - ./.env.backend
+    environment: *backend-environment
+    command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --workers 1 --proxy-headers --forwarded-allow-ips=*
+    volumes:
+      - hrms_documents:/app/storage/documents
+    depends_on:
+      postgres:
+        condition: service_healthy
+      migrate:
+        condition: service_completed_successfully
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/health', timeout=3)"]
+      interval: 10s
+      timeout: 5s
+      retries: 6
+      start_period: 15s
+    logging: *default-logging
+    networks: [hrms_internal]
 
   frontend:
-    build:
-      context: ./frontend
-      target: prod
+    image: ghcr.io/${GHCR_NAMESPACE:?Set GHCR_NAMESPACE}/hrms-frontend:${IMAGE_TAG:?Set IMAGE_TAG}
     restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q --spider http://127.0.0.1/ || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 6
+      start_period: 10s
+    logging: *default-logging
+    networks: [hrms_internal]
 
-  nginx:
+  web:
     image: nginx:1.27-alpine
     restart: unless-stopped
     ports:
-      - "80:80"
-      - "443:443"
+      # Loopback-only prevents collision with the existing app/reverse proxy.
+      - "127.0.0.1:${HRMS_BIND_PORT:-8081}:80"
     volumes:
-      - ./nginx/nginx.prod.conf:/etc/nginx/conf.d/default.conf:ro
-      # Mount real TLS certs here in production, e.g.:
-      # - ./nginx/certs:/etc/nginx/certs:ro
+      - ./nginx.prod.conf:/etc/nginx/conf.d/default.conf:ro
     depends_on:
-      - backend
-      - frontend
+      backend:
+        condition: service_healthy
+      frontend:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q --spider http://127.0.0.1/health || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 6
+      start_period: 10s
+    logging: *default-logging
+    networks: [hrms_internal]
 
 volumes:
   hrms_postgres_data:
+    name: hrms_postgres_data
+  hrms_documents:
+    name: hrms_documents
+
+networks:
+  hrms_internal:
+    name: hrms_internal
+    driver: bridge

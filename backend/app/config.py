@@ -44,6 +44,13 @@ class Settings(BaseSettings):
     # which is the ./backend bind mount in docker-compose — survives restarts).
     DOCUMENT_STORAGE_DIR: str = "storage/documents"
 
+    # Used once on a fresh production database to create the first account.
+    # The bootstrap is idempotent, so keeping these values configured is safe.
+    BOOTSTRAP_SUPERADMIN_EMAIL: str = ""
+    BOOTSTRAP_SUPERADMIN_FIRST_NAME: str = ""
+    BOOTSTRAP_SUPERADMIN_LAST_NAME: str = ""
+    BOOTSTRAP_SUPERADMIN_EMPLOYEE_CODE: str = "NT0001"
+
     # Flowtuple workflow system — already deployed separately; embedded via iframe.
     FLOWTUPLE_BASE_URL: str = "https://flowtuple.newtuple.internal"
     FLOWTUPLE_ENABLED: bool = False
