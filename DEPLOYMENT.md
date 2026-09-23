@@ -56,11 +56,11 @@ Add these environment variables:
 | `BOOTSTRAP_ADMIN_EMPLOYEE_CODE` | `NT0001` |
 | `PRODUCTION_SERVER_PORT` | `22` |
 | `HRMS_BIND_PORT` | `8081` |
-| `EMAIL_ENABLED` | `false` |
-| `SMTP_HOST` | Empty, or the SMTP hostname |
+| `EMAIL_ENABLED` | `true` |
+| `SMTP_HOST` | `smtp.gmail.com` |
 | `SMTP_PORT` | `587` |
-| `SMTP_USERNAME` | Empty, or the SMTP username |
-| `EMAIL_FROM` | `Newtuple HRMS no-reply@newtuple.com` |
+| `SMTP_USERNAME` | `priyanka@newtuple.com` |
+| `EMAIL_FROM` | `Newtuple HRMS <priyanka@newtuple.com>` |
 | `PRODUCTION_DEPLOY_ENABLED` | `true` after all values above are ready |
 
 Instead of entering these variables individually, run:
@@ -72,8 +72,9 @@ configure-production-variables.bat
 The script creates the `production` environment when needed, writes all of the
 variables above, checks repository and environment secrets, and sets
 `PRODUCTION_DEPLOY_ENABLED=true` only when every required secret exists. It
-defaults to `62-238-103-67.sslip.io` with email disabled and blank SMTP settings,
-as listed above. Run it again at any time to update or validate the configuration.
+defaults to `62-238-103-67.sslip.io` with Gmail email enabled, as listed above.
+The Gmail App Password must be stored in the `SMTP_PASSWORD` GitHub secret. Run
+the script again at any time to update or validate the configuration.
 
 The workflow validates required values before connecting to the server. It
 creates `/opt/hrms/.env` and `/opt/hrms/.env.backend`; no manual server-side

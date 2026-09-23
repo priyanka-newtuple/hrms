@@ -8,10 +8,10 @@ param(
     [string]$AdminFirstName = "Priyanka",
     [string]$AdminLastName = "Admin",
     [string]$AdminEmployeeCode = "NT0001",
-    [string]$SmtpHost = "",
-    [string]$SmtpUsername = "",
-    [string]$EmailFrom = "Newtuple HRMS no-reply@newtuple.com",
-    [switch]$EnableEmail
+    [string]$SmtpHost = "smtp.gmail.com",
+    [string]$SmtpUsername = "priyanka@newtuple.com",
+    [string]$EmailFrom = "Newtuple HRMS <priyanka@newtuple.com>",
+    [switch]$DisableEmail
 )
 
 $ErrorActionPreference = "Stop"
@@ -36,7 +36,7 @@ if ($LASTEXITCODE -ne 0) {
     throw "Could not create or access the '$Environment' environment."
 }
 
-$emailEnabled = if ($EnableEmail) { "true" } else { "false" }
+$emailEnabled = if ($DisableEmail) { "false" } else { "true" }
 $variables = [ordered]@{
     HRMS_DOMAIN                         = $HrmsDomain
     CERTBOT_EMAIL                       = $CertbotEmail
@@ -78,7 +78,7 @@ $requiredSecrets = @(
     "GOOGLE_CLIENT_ID",
     "GOOGLE_CLIENT_SECRET"
 )
-if ($EnableEmail) {
+if (-not $DisableEmail) {
     $requiredSecrets += "SMTP_PASSWORD"
 }
 
