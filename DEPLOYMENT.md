@@ -60,8 +60,20 @@ Add these environment variables:
 | `SMTP_HOST` | Empty, or the SMTP hostname |
 | `SMTP_PORT` | `587` |
 | `SMTP_USERNAME` | Empty, or the SMTP username |
-| `EMAIL_FROM` | `Newtuple HRMS <no-reply@newtuple.com>` |
+| `EMAIL_FROM` | `Newtuple HRMS no-reply@newtuple.com` |
 | `PRODUCTION_DEPLOY_ENABLED` | `true` after all values above are ready |
+
+Instead of entering these variables individually, run:
+
+```bat
+configure-production-variables.bat
+```
+
+The script creates the `production` environment when needed, writes all of the
+variables above, checks repository and environment secrets, and sets
+`PRODUCTION_DEPLOY_ENABLED=true` only when every required secret exists. It
+defaults to `hrms.newtuple.com` with email disabled and blank SMTP settings, as
+listed above. Run it again at any time to update or validate the configuration.
 
 The workflow validates required values before connecting to the server. It
 creates `/opt/hrms/.env` and `/opt/hrms/.env.backend`; no manual server-side
