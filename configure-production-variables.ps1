@@ -94,7 +94,14 @@ $missingSecrets = @($requiredSecrets | Where-Object { $_ -notin $availableSecret
 $deploymentEnabled = if ($missingSecrets.Count -eq 0) { "true" } else { "false" }
 & gh variable set PRODUCTION_DEPLOY_ENABLED --repo $Repository --env $Environment --body $deploymentEnabled
 if ($LASTEXITCODE -ne 0) {
-    throw "Failed to set PRODUCTION_DEPLOY_ENABLED."
+    throw "Failed to set environment PRODUCTION_DEPLOY_ENABLED."
+}
+
+# GitHub evaluates the deploy job's `if` expression before loading environment
+# variables. Keep this flag at repository level as well so the job can start.
+& gh variable set PRODUCTION_DEPLOY_ENABLED --repo $Repository --body $deploymentEnabled
+if ($LASTEXITCODE -ne 0) {
+    throw "Failed to set repository PRODUCTION_DEPLOY_ENABLED."
 }
 
 if ($missingSecrets.Count -gt 0) {

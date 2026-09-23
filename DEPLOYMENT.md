@@ -71,7 +71,9 @@ configure-production-variables.bat
 
 The script creates the `production` environment when needed, writes all of the
 variables above, checks repository and environment secrets, and sets
-`PRODUCTION_DEPLOY_ENABLED=true` only when every required secret exists. It
+`PRODUCTION_DEPLOY_ENABLED=true` at both repository and environment level only
+when every required secret exists. The repository-level flag is required because
+GitHub evaluates the deploy job condition before loading environment variables. It
 defaults to `62-238-103-67.sslip.io` with Gmail email enabled, as listed above.
 The Gmail App Password must be stored in the `SMTP_PASSWORD` GitHub secret. Run
 the script again at any time to update or validate the configuration.
