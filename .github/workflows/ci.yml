@@ -146,6 +146,7 @@ jobs:
           SMTP_PORT: ${{ vars.SMTP_PORT || '587' }}
           SMTP_USERNAME: ${{ vars.SMTP_USERNAME }}
           EMAIL_FROM: ${{ vars.EMAIL_FROM || 'Newtuple HRMS <no-reply@newtuple.com>' }}
+          PRODUCTION_DEMO_DATA_ENABLED: ${{ vars.PRODUCTION_DEMO_DATA_ENABLED || 'false' }}
         run: |
           : "${POSTGRES_PASSWORD:?Missing POSTGRES_PASSWORD production secret}"
           : "${JWT_SECRET:?Missing JWT_SECRET production secret}"
@@ -178,6 +179,7 @@ jobs:
           SMTP_USERNAME=$SMTP_USERNAME
           SMTP_PASSWORD=$SMTP_PASSWORD
           EMAIL_FROM="$EMAIL_FROM"
+          SEED_PRODUCTION_DEMO_DATA=$PRODUCTION_DEMO_DATA_ENABLED
           OUTBOX_FLUSH_INTERVAL_SECONDS=20
           DOCUMENT_STORAGE_DIR=storage/documents
           FLOWTUPLE_BASE_URL=https://flowtuple.newtuple.internal

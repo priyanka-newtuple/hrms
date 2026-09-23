@@ -51,6 +51,7 @@ $variables = [ordered]@{
     SMTP_PORT                           = "587"
     SMTP_USERNAME                       = $SmtpUsername
     EMAIL_FROM                          = $EmailFrom
+    PRODUCTION_DEMO_DATA_ENABLED        = "true"
 }
 
 Write-Host "Configuring GitHub environment variables for $Repository / $Environment..."

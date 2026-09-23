@@ -34,7 +34,9 @@ services:
       - ./.env.backend
     environment: *backend-environment
     command: >-
-      sh -c "alembic upgrade head && python -m app.seed.production_data"
+      sh -c "alembic upgrade head && python -m app.seed.production_data &&
+      if [ \"$${SEED_PRODUCTION_DEMO_DATA:-false}\" = \"true\" ]; then
+      python -m app.seed.production_demo_data; fi"
     depends_on:
       postgres:
         condition: service_healthy

@@ -61,6 +61,7 @@ Add these environment variables:
 | `SMTP_PORT` | `587` |
 | `SMTP_USERNAME` | `priyanka@newtuple.com` |
 | `EMAIL_FROM` | `Newtuple HRMS <priyanka@newtuple.com>` |
+| `PRODUCTION_DEMO_DATA_ENABLED` | `true` to create one marked demo employee per role |
 | `PRODUCTION_DEPLOY_ENABLED` | `true` after all values above are ready |
 
 Instead of entering these variables individually, run:
