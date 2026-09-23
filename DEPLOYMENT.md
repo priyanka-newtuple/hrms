@@ -82,6 +82,11 @@ The workflow validates required values before connecting to the server. It
 creates `/opt/hrms/.env` and `/opt/hrms/.env.backend`; no manual server-side
 editing is needed.
 
+If another Dockerized Nginx already owns ports 80 and 443, the bootstrap keeps
+that proxy and its existing virtual hosts in place. It connects the proxy to the
+isolated `hrms_internal` network, adds a separate HRMS virtual host, and obtains
+the HRMS certificate through the proxy's existing Certbot volumes.
+
 ## Run deployment from Windows
 
 Double-click `deploy-production.bat`, or run it from Command Prompt. It installs
