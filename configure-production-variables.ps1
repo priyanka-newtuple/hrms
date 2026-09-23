@@ -2,7 +2,7 @@
 param(
     [string]$Repository = "priyanka-newtuple/hrms",
     [string]$Environment = "production",
-    [string]$HrmsDomain = "hrms.newtuple.com",
+    [string]$HrmsDomain = "62-238-103-67.sslip.io",
     [string]$CertbotEmail = "admin@newtuple.com",
     [string]$AdminEmail = "priyanka@newtuple.com",
     [string]$AdminFirstName = "Priyanka",

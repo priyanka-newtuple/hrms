@@ -48,7 +48,7 @@ Add these environment variables:
 
 | Variable | Example |
 | --- | --- |
-| `HRMS_DOMAIN` | `hrms.newtuple.com` |
+| `HRMS_DOMAIN` | `62-238-103-67.sslip.io` |
 | `CERTBOT_EMAIL` | `admin@newtuple.com` |
 | `BOOTSTRAP_ADMIN_EMAIL` | `priyanka@newtuple.com` |
 | `BOOTSTRAP_ADMIN_FIRST_NAME` | `Priyanka` |
@@ -72,8 +72,8 @@ configure-production-variables.bat
 The script creates the `production` environment when needed, writes all of the
 variables above, checks repository and environment secrets, and sets
 `PRODUCTION_DEPLOY_ENABLED=true` only when every required secret exists. It
-defaults to `hrms.newtuple.com` with email disabled and blank SMTP settings, as
-listed above. Run it again at any time to update or validate the configuration.
+defaults to `62-238-103-67.sslip.io` with email disabled and blank SMTP settings,
+as listed above. Run it again at any time to update or validate the configuration.
 
 The workflow validates required values before connecting to the server. It
 creates `/opt/hrms/.env` and `/opt/hrms/.env.backend`; no manual server-side
