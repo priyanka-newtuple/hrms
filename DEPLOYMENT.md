@@ -85,7 +85,8 @@ editing is needed.
 If another Dockerized Nginx already owns ports 80 and 443, the bootstrap keeps
 that proxy and its existing virtual hosts in place. It connects the proxy to the
 isolated `hrms_internal` network, adds a separate HRMS virtual host, and obtains
-the HRMS certificate through the proxy's existing Certbot volumes.
+the HRMS certificate through the proxy's existing Certbot volumes. A daily
+systemd timer restores the route after proxy recreation and renews certificates.
 
 ## Run deployment from Windows
 

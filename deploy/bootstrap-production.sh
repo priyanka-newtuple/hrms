@@ -159,6 +159,54 @@ EOF
   docker cp "$config_file" "$proxy:/etc/nginx/conf.d/hrms.conf"
   docker exec "$proxy" nginx -t
   docker exec "$proxy" nginx -s reload
+
+  cat > /usr/local/sbin/hrms-proxy-maintain <<'MAINTAIN'
+#!/usr/bin/env bash
+set -Eeuo pipefail
+proxy="$(docker ps --filter publish=80 --format '{{.ID}}' | head -n 1)"
+test -n "$proxy"
+docker exec "$proxy" nginx -t >/dev/null
+proxy_name="$(docker inspect --format '{{.Name}}' "$proxy" | sed 's#^/##')"
+letsencrypt_volume="$(docker inspect --format '{{range .Mounts}}{{if eq .Destination "/etc/letsencrypt"}}{{.Name}}{{end}}{{end}}' "$proxy")"
+webroot_volume="$(docker inspect --format '{{range .Mounts}}{{if eq .Destination "/var/www/certbot"}}{{.Name}}{{end}}{{end}}' "$proxy")"
+test -n "$letsencrypt_volume"
+test -n "$webroot_volume"
+if ! docker network inspect --format '{{range .Containers}}{{println .Name}}{{end}}' hrms_internal | grep -Fxq "$proxy_name"; then
+  docker network connect hrms_internal "$proxy"
+fi
+docker cp /opt/hrms/proxy/hrms.conf "$proxy:/etc/nginx/conf.d/hrms.conf"
+docker exec "$proxy" nginx -t
+docker run --rm \
+  -v "$letsencrypt_volume:/etc/letsencrypt" \
+  -v "$webroot_volume:/var/www/certbot" \
+  certbot/certbot:latest renew --quiet
+docker exec "$proxy" nginx -s reload
+MAINTAIN
+  chmod 0755 /usr/local/sbin/hrms-proxy-maintain
+  cat > /etc/systemd/system/hrms-proxy-maintain.service <<'EOF'
+[Unit]
+Description=Restore the HRMS proxy route and renew TLS certificates
+After=docker.service network-online.target
+Requires=docker.service
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/sbin/hrms-proxy-maintain
+EOF
+  cat > /etc/systemd/system/hrms-proxy-maintain.timer <<'EOF'
+[Unit]
+Description=Maintain the HRMS proxy route and TLS certificates daily
+
+[Timer]
+OnCalendar=daily
+RandomizedDelaySec=1h
+Persistent=true
+
+[Install]
+WantedBy=timers.target
+EOF
+  systemctl daemon-reload
+  systemctl enable --now hrms-proxy-maintain.timer
   echo "Configured $DOMAIN on existing Docker Nginx proxy $proxy_name."
 }
 
