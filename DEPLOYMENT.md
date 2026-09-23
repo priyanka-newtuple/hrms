@@ -69,8 +69,9 @@ editing is needed.
 
 ## Run deployment from Windows
 
-Install GitHub CLI and sign in once with `gh auth login`. Then double-click
-`deploy-production.bat`, or run it from Command Prompt:
+Double-click `deploy-production.bat`, or run it from Command Prompt. It installs
+GitHub CLI through Windows Package Manager when needed and opens GitHub's web
+sign-in when the computer has no active GitHub CLI session:
 
 ```bat
 deploy-production.bat
