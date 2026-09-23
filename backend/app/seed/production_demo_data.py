@@ -41,6 +41,7 @@ DEMO_PERSONAS = (
     DemoPersona(RoleName.OFFICE_ADMIN, "demo.officeadmin@newtuple.com", "DEMO0008", "Demo", "Office Admin", "Administration", "Office Administrator", RoleName.SUPER_ADMIN),
     DemoPersona(RoleName.EMPLOYEE, "demo.employee@newtuple.com", "DEMO0009", "Demo", "Employee", "Engineering", "Software Engineer", RoleName.PROJECT_MANAGER),
 )
+DEMO_EMAILS = frozenset(persona.email for persona in DEMO_PERSONAS)
 
 
 async def ensure_production_demo_employees(db, roles: dict[RoleName, Role]) -> list[Employee]:

@@ -27,6 +27,7 @@ from app.database import get_db
 from app.models.employee import Employee
 from app.models.user import User
 from app.schemas.auth import CurrentUserOut, DevLoginRequest, FeaturePermissionOut
+from app.seed.production_demo_data import DEMO_EMAILS
 
 router = APIRouter(prefix="/auth", tags=["auth"])
 settings = get_settings()
@@ -159,6 +160,21 @@ async def dev_login(payload: DevLoginRequest, response: Response, db: AsyncSessi
     return {"ok": True}
 
 
+@router.post("/demo-login")
+async def demo_login(payload: DevLoginRequest, response: Response, db: AsyncSession = Depends(get_db)):
+    email = payload.email.lower()
+    if not settings.SEED_PRODUCTION_DEMO_DATA or email not in DEMO_EMAILS:
+        raise NotAuthenticated("Demo login is disabled or the requested persona is invalid")
+
+    user = (await db.execute(select(User).where(User.email == email, User.is_active.is_(True)))).scalar_one_or_none()
+    if user is None:
+        raise NotAuthenticated("Demo persona is unavailable")
+
+    token = create_session_token(user.id, user.email)
+    _set_session_cookie(response, token)
+    return {"ok": True}
+
+
 @router.post("/logout")
 async def logout(response: Response):
     _clear_cookie(response, settings.SESSION_COOKIE_NAME)
@@ -189,6 +205,29 @@ async def dev_users(db: AsyncSession = Depends(get_db)):
         )
     personas.sort(key=lambda p: p["role_name"])
     return personas
+
+
+@router.get("/demo-users")
+async def demo_users(db: AsyncSession = Depends(get_db)):
+    """Return only the fixed demo personas when production demo mode is enabled."""
+    if not settings.SEED_PRODUCTION_DEMO_DATA:
+        raise NotAuthenticated("Demo login is disabled")
+    result = await db.execute(
+        select(Employee)
+        .join(Employee.user)
+        .options(selectinload(Employee.role), selectinload(Employee.user))
+        .where(User.email.in_(DEMO_EMAILS), User.is_active.is_(True))
+        .order_by(Employee.employee_code)
+    )
+    return [
+        {
+            "email": employee.user.email,
+            "full_name": employee.full_name,
+            "role_name": employee.role.name,
+            "department": employee.department,
+        }
+        for employee in result.scalars().all()
+    ]
 
 
 @router.get("/me", response_model=CurrentUserOut)

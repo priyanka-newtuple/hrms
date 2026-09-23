@@ -51,6 +51,10 @@ class Settings(BaseSettings):
     BOOTSTRAP_SUPERADMIN_LAST_NAME: str = ""
     BOOTSTRAP_SUPERADMIN_EMPLOYEE_CODE: str = "NT0001"
 
+    # Explicitly enables the fixed production demo personas and their one-click
+    # role login. Keep false in real production environments with live data.
+    SEED_PRODUCTION_DEMO_DATA: bool = False
+
     # Flowtuple workflow system — already deployed separately; embedded via iframe.
     FLOWTUPLE_BASE_URL: str = "https://flowtuple.newtuple.internal"
     FLOWTUPLE_ENABLED: bool = False
