@@ -158,7 +158,9 @@ Production is deployed through GitHub Actions using immutable GHCR images. The
 stack listens on a loopback-only port behind the server's existing reverse
 proxy, so it does not conflict with other applications on ports 80/443. See
 [DEPLOYMENT.md](DEPLOYMENT.md) for the one-time server and GitHub setup, TLS,
-secrets, deployment behavior, rollback, and operating commands.
+secrets, deployment behavior, rollback, and operating commands. After the
+GitHub Environment is configured, Windows users can run
+`deploy-production.bat` to launch and follow the complete deployment.
 
 ## What's intentionally out of scope for this pass
 

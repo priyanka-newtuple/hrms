@@ -128,6 +128,66 @@ jobs:
           chmod 600 ~/.ssh/hrms_deploy
           printf '%s\n' "$SSH_HOST_KEY" > ~/.ssh/known_hosts
           chmod 600 ~/.ssh/known_hosts
+      - name: Build server configuration
+        shell: bash
+        env:
+          POSTGRES_PASSWORD: ${{ secrets.POSTGRES_PASSWORD }}
+          JWT_SECRET: ${{ secrets.JWT_SECRET }}
+          GOOGLE_CLIENT_ID: ${{ secrets.GOOGLE_CLIENT_ID }}
+          GOOGLE_CLIENT_SECRET: ${{ secrets.GOOGLE_CLIENT_SECRET }}
+          SMTP_PASSWORD: ${{ secrets.SMTP_PASSWORD }}
+          HRMS_DOMAIN: ${{ vars.HRMS_DOMAIN }}
+          BOOTSTRAP_ADMIN_EMAIL: ${{ vars.BOOTSTRAP_ADMIN_EMAIL }}
+          BOOTSTRAP_ADMIN_FIRST_NAME: ${{ vars.BOOTSTRAP_ADMIN_FIRST_NAME }}
+          BOOTSTRAP_ADMIN_LAST_NAME: ${{ vars.BOOTSTRAP_ADMIN_LAST_NAME }}
+          BOOTSTRAP_ADMIN_EMPLOYEE_CODE: ${{ vars.BOOTSTRAP_ADMIN_EMPLOYEE_CODE || 'NT0001' }}
+          EMAIL_ENABLED: ${{ vars.EMAIL_ENABLED || 'false' }}
+          SMTP_HOST: ${{ vars.SMTP_HOST }}
+          SMTP_PORT: ${{ vars.SMTP_PORT || '587' }}
+          SMTP_USERNAME: ${{ vars.SMTP_USERNAME }}
+          EMAIL_FROM: ${{ vars.EMAIL_FROM || 'Newtuple HRMS <no-reply@newtuple.com>' }}
+        run: |
+          : "${POSTGRES_PASSWORD:?Missing POSTGRES_PASSWORD production secret}"
+          : "${JWT_SECRET:?Missing JWT_SECRET production secret}"
+          : "${GOOGLE_CLIENT_ID:?Missing GOOGLE_CLIENT_ID production secret}"
+          : "${GOOGLE_CLIENT_SECRET:?Missing GOOGLE_CLIENT_SECRET production secret}"
+          : "${HRMS_DOMAIN:?Missing HRMS_DOMAIN production variable}"
+          : "${BOOTSTRAP_ADMIN_EMAIL:?Missing BOOTSTRAP_ADMIN_EMAIL production variable}"
+          : "${BOOTSTRAP_ADMIN_FIRST_NAME:?Missing BOOTSTRAP_ADMIN_FIRST_NAME production variable}"
+          : "${BOOTSTRAP_ADMIN_LAST_NAME:?Missing BOOTSTRAP_ADMIN_LAST_NAME production variable}"
+          [[ "$POSTGRES_PASSWORD" =~ ^[A-Za-z0-9_-]{24,}$ ]] || { echo "POSTGRES_PASSWORD must be at least 24 URL-safe characters" >&2; exit 1; }
+          [[ "$JWT_SECRET" =~ ^[A-Fa-f0-9]{64,}$ ]] || { echo "JWT_SECRET must contain at least 64 hexadecimal characters" >&2; exit 1; }
+          [[ "$HRMS_DOMAIN" =~ ^[A-Za-z0-9.-]+$ ]] || { echo "HRMS_DOMAIN is invalid" >&2; exit 1; }
+          [[ "$BOOTSTRAP_ADMIN_EMAIL" == *@newtuple.com ]] || { echo "Bootstrap administrator must use @newtuple.com" >&2; exit 1; }
+          printf 'POSTGRES_PASSWORD=%s\n' "$POSTGRES_PASSWORD" > "$RUNNER_TEMP/hrms-server.env"
+          cat > "$RUNNER_TEMP/hrms-backend.env" <<EOF
+          APP_NAME=Newtuple HRMS
+          JWT_SECRET=$JWT_SECRET
+          JWT_ALGORITHM=HS256
+          JWT_EXPIRE_MINUTES=720
+          SESSION_COOKIE_NAME=hrms_session
+          GOOGLE_CLIENT_ID=$GOOGLE_CLIENT_ID
+          GOOGLE_CLIENT_SECRET=$GOOGLE_CLIENT_SECRET
+          GOOGLE_REDIRECT_URI=https://$HRMS_DOMAIN/api/v1/auth/google/callback
+          ALLOWED_EMAIL_DOMAIN=newtuple.com
+          FRONTEND_URL=https://$HRMS_DOMAIN
+          CORS_ORIGINS=["https://$HRMS_DOMAIN"]
+          EMAIL_ENABLED=$EMAIL_ENABLED
+          SMTP_HOST=$SMTP_HOST
+          SMTP_PORT=$SMTP_PORT
+          SMTP_USERNAME=$SMTP_USERNAME
+          SMTP_PASSWORD=$SMTP_PASSWORD
+          EMAIL_FROM="$EMAIL_FROM"
+          OUTBOX_FLUSH_INTERVAL_SECONDS=20
+          DOCUMENT_STORAGE_DIR=storage/documents
+          FLOWTUPLE_BASE_URL=https://flowtuple.newtuple.internal
+          FLOWTUPLE_ENABLED=false
+          BOOTSTRAP_SUPERADMIN_EMAIL=$BOOTSTRAP_ADMIN_EMAIL
+          BOOTSTRAP_SUPERADMIN_FIRST_NAME=$BOOTSTRAP_ADMIN_FIRST_NAME
+          BOOTSTRAP_SUPERADMIN_LAST_NAME=$BOOTSTRAP_ADMIN_LAST_NAME
+          BOOTSTRAP_SUPERADMIN_EMPLOYEE_CODE=$BOOTSTRAP_ADMIN_EMPLOYEE_CODE
+          EOF
+          chmod 600 "$RUNNER_TEMP/hrms-server.env" "$RUNNER_TEMP/hrms-backend.env"
       - name: Upload deployment bundle
         shell: bash
         env:
@@ -138,8 +198,25 @@ jobs:
           remote_stage="/tmp/hrms-${GITHUB_SHA}"
           ssh -i ~/.ssh/hrms_deploy -p "$SERVER_PORT" "$SERVER_USER@$SERVER_HOST" "mkdir -p '$remote_stage'"
           scp -i ~/.ssh/hrms_deploy -P "$SERVER_PORT" \
-            docker-compose.prod.yml nginx/nginx.prod.conf deploy/deploy.sh \
+            docker-compose.prod.yml nginx/nginx.prod.conf deploy/deploy.sh deploy/bootstrap-production.sh \
+            "$RUNNER_TEMP/hrms-server.env" "$RUNNER_TEMP/hrms-backend.env" \
             "$SERVER_USER@$SERVER_HOST:$remote_stage/"
+      - name: Bootstrap production host
+        shell: bash
+        env:
+          SERVER_HOST: ${{ secrets.PRODUCTION_SERVER_HOST }}
+          SERVER_USER: ${{ secrets.PRODUCTION_SERVER_USER }}
+          SERVER_PORT: ${{ vars.PRODUCTION_SERVER_PORT || '22' }}
+          HRMS_DOMAIN: ${{ vars.HRMS_DOMAIN }}
+          CERTBOT_EMAIL: ${{ vars.CERTBOT_EMAIL }}
+          BIND_PORT: ${{ vars.HRMS_BIND_PORT || '8081' }}
+          GHCR_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          : "${CERTBOT_EMAIL:?Missing CERTBOT_EMAIL production variable}"
+          remote_stage="/tmp/hrms-${GITHUB_SHA}"
+          ssh_args=(-i ~/.ssh/hrms_deploy -p "$SERVER_PORT" "$SERVER_USER@$SERVER_HOST")
+          ssh "${ssh_args[@]}" "chmod +x '$remote_stage/bootstrap-production.sh' '$remote_stage/deploy.sh' && if [ \"\$(id -u)\" -eq 0 ]; then '$remote_stage/bootstrap-production.sh' prepare '$remote_stage' '$HRMS_DOMAIN' '$BIND_PORT'; else sudo -n '$remote_stage/bootstrap-production.sh' prepare '$remote_stage' '$HRMS_DOMAIN' '$BIND_PORT'; fi"
+          printf '%s' "$GHCR_TOKEN" | ssh "${ssh_args[@]}" "if [ \"\$(id -u)\" -eq 0 ]; then docker login ghcr.io -u '${GITHUB_REPOSITORY_OWNER,,}' --password-stdin; else sudo -n docker login ghcr.io -u '${GITHUB_REPOSITORY_OWNER,,}' --password-stdin; fi"
       - name: Deploy and verify
         shell: bash
         env:
@@ -150,7 +227,19 @@ jobs:
         run: |
           remote_stage="/tmp/hrms-${GITHUB_SHA}"
           ssh -i ~/.ssh/hrms_deploy -p "$SERVER_PORT" "$SERVER_USER@$SERVER_HOST" \
-            "chmod +x '$remote_stage/deploy.sh' && DEPLOY_DIR=/opt/hrms RELEASE_SHA='$GITHUB_SHA' IMAGE_TAG='sha-$GITHUB_SHA' GHCR_NAMESPACE='${GITHUB_REPOSITORY_OWNER,,}' HRMS_BIND_PORT='$BIND_PORT' '$remote_stage/deploy.sh'"
+            "if [ \"\$(id -u)\" -eq 0 ]; then env DEPLOY_DIR=/opt/hrms RELEASE_SHA='$GITHUB_SHA' IMAGE_TAG='sha-$GITHUB_SHA' GHCR_NAMESPACE='${GITHUB_REPOSITORY_OWNER,,}' HRMS_BIND_PORT='$BIND_PORT' '$remote_stage/deploy.sh'; else sudo -n env DEPLOY_DIR=/opt/hrms RELEASE_SHA='$GITHUB_SHA' IMAGE_TAG='sha-$GITHUB_SHA' GHCR_NAMESPACE='${GITHUB_REPOSITORY_OWNER,,}' HRMS_BIND_PORT='$BIND_PORT' '$remote_stage/deploy.sh'; fi"
+      - name: Configure production TLS
+        shell: bash
+        env:
+          SERVER_HOST: ${{ secrets.PRODUCTION_SERVER_HOST }}
+          SERVER_USER: ${{ secrets.PRODUCTION_SERVER_USER }}
+          SERVER_PORT: ${{ vars.PRODUCTION_SERVER_PORT || '22' }}
+          HRMS_DOMAIN: ${{ vars.HRMS_DOMAIN }}
+          CERTBOT_EMAIL: ${{ vars.CERTBOT_EMAIL }}
+        run: |
+          remote_stage="/tmp/hrms-${GITHUB_SHA}"
+          ssh -i ~/.ssh/hrms_deploy -p "$SERVER_PORT" "$SERVER_USER@$SERVER_HOST" \
+            "if [ \"\$(id -u)\" -eq 0 ]; then '$remote_stage/bootstrap-production.sh' tls '$remote_stage' '$HRMS_DOMAIN' '$CERTBOT_EMAIL'; else sudo -n '$remote_stage/bootstrap-production.sh' tls '$remote_stage' '$HRMS_DOMAIN' '$CERTBOT_EMAIL'; fi"
       - name: Remove temporary deployment bundle
         if: always()
         shell: bash
